@@ -1,0 +1,99 @@
+<div class="kaspi">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="logo">
+        <img src="assets/images/kaspi.png" class="pic_logo" alt="Kaspi">
+        <span>Kaspi.kz</span>
+    </div>
+
+      <nav class="top-links">
+        <a href="#">Клиентам</a>
+        <a href="#">Бизнесу</a>
+        <a href="#">Kaspi Гид</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- SEARCH BAR -->
+  <div class="searchbar">
+    <div class="search-inner">
+      <button class="tab active">Магазин</button>
+
+      <div class="search">
+        <input [(ngModel)]="query" placeholder="Поиск товара" />
+        <button class="search-btn">🔍</button>
+      </div>
+
+      <div class="city">
+        <div class="city-label">Мой город:</div>
+        <a class="city-link" href="#">Алматы</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORY STRIP -->
+  <div class="cats">
+    <div class="cats-inner">
+      <a class="cat" *ngFor="let c of categories" href="#">{{ c }}</a>
+    </div>
+  </div>
+
+  <!-- BREADCRUMBS -->
+  <div class="crumbs">
+    <div class="crumbs-inner">
+      <a href="#">Kaspi Магазин</a> <span>→</span>
+      <a href="#">Компьютеры</a> <span>→</span>
+      <span class="muted">Комплектующие в Алматы</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- LEFT FILTERS -->
+    <aside class="left">
+      <div class="block">
+        <div class="block-title">Все категории <span class="muted">(11545)</span></div>
+        <div class="tree">
+          <div class="tree-item">Компьютеры <span class="muted">(11545)</span></div>
+          <div class="tree-sub">• Комплектующие <span class="muted">(11545)</span></div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Цена</div>
+        <label class="check" *ngFor="let r of priceRanges">
+          <input type="checkbox" />
+          <span>{{ r }}</span>
+        </label>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Бренд</div>
+        <label class="check" *ngFor="let b of brands">
+          <input type="checkbox" />
+          <span>{{ b }}</span>
+        </label>
+        <a class="more" href="#">Показать еще</a>
+      </div>
+    </aside>
+
+    <!-- RIGHT CONTENT -->
+    <section class="right">
+      <div class="toolbar">
+
+        <select class="sort" [(ngModel)]="sort">
+          <option value="popular">Популярные</option>
+          <option value="priceAsc">Цена ↑</option>
+          <option value="priceDesc">Цена ↓</option>
+          <option value="ratingDesc">Рейтинг ↓</option>
+        </select>
+      </div>
+
+      <div class="grid">
+        <app-product-card *ngFor="let p of filtered" [product]="p"></app-product-card>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,51 @@
+<div class="k-card">
+  <div class="k-media">
+    <a [href]="product.link" target="_blank" rel="noopener">
+      <img class="k-img" [src]="product.image" [alt]="product.name" />
+    </a>
+
+    <div class="k-badges">
+      <div class="k-badge red" *ngIf="product.badgeTop">{{ product.badgeTop }}</div>
+      <div class="k-badge green" *ngIf="product.badgeGreen">{{ product.badgeGreen }}</div>
+    </div>
+  </div>
+
+  <div class="k-sep"></div>
+
+  <a class="k-title" [href]="product.link" target="_blank" rel="noopener">
+    {{ product.name }}
+  </a>
+
+  <div class="k-rating">
+    <span class="k-stars">
+      <span class="k-star" *ngFor="let s of stars()">
+        {{ s <= fullStars() ? '★' : '★' }}
+      </span>
+    </span>
+    <a class="k-reviews link" [href]="product.link" target="_blank">
+  ({{ product.reviews }} отзывов)
+</a>
+
+
+  </div>
+
+  <div class="k-pricegrid">
+    <div class="k-col">
+      <div class="k-label">Цена</div>
+      <div class="k-price">{{ product.price | number }} ₸</div>
+    </div>
+
+    <div class="k-divider"></div>
+
+    <div class="k-col">
+      <div class="k-label">В рассрочку</div>
+      <div class="k-installment" *ngIf="product.installmentMonthly && product.installmentMonths; else noInst">
+        <span class="k-yellow">{{ product.installmentMonthly | number }} ₸</span>
+        <span class="k-x">x{{ product.installmentMonths }}</span>
+      </div>
+      <ng-template #noInst>
+        <div class="k-installment muted">—</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

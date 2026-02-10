@@ -1,0 +1,50 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+
+.h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.sub {
+  margin: 6px 0 16px;
+  color: rgba(0,0,0,.64);
+}
+
+.toast {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.92);
+  color: #fff;
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 650px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+app-product-card {
+  display: block;
+  border-right: 1px solid rgba(0,0,0,.12);
+  border-bottom: 1px solid rgba(0,0,0,.12);
+}
+
+

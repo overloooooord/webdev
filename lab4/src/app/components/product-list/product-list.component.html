@@ -1,0 +1,14 @@
+<div class="page">
+  <h1 class="h1">Online Store</h1>
+  <p class="sub">Kaspi products + Share to Telegram / WhatsApp</p>
+
+  <div class="toast" *ngIf="lastShare">{{ lastShare }}</div>
+
+  <div class="grid">
+    <app-product-card
+      *ngFor="let p of products"
+      [product]="p"
+      (shared)="onShared($event)"
+    ></app-product-card>
+  </div>
+</div>
