@@ -1,64 +1,67 @@
-# Речь для презентации проекта: Ubisoft Ticket Manager
+# Ubisoft Ticket Manager - Professional Presentation Script & Technical Brief
 
-## 1. Введение (Какую задачу решает проект)
-«Всем привет! Сегодня я представляю **Ubisoft Ticket Manager** - систему автоматизации и управления процессом восстановления игровых аккаунтов Ubisoft. 
-При работе с большим количеством аккаунтов главные проблемы - это жесткие лимиты на запросы (Rate Limits 429), блокировки со стороны Cloudflare/Datadome и необходимость постоянно вручную логиниться, создавать тикеты поддержки и отвечать на них. 
-Наш проект полностью автоматизирует этот цикл: от массового импорта аккаунтов до умных ответов поддержки с помощью ИИ.»
+This document serves as your comprehensive guide and script for presenting the **Ubisoft Ticket Manager** project to stakeholders, technical leads, or clients. It has been prepared entirely in English, focusing on technical achievements, architectural decisions, and robust feature implementations, omitting any mention of development bugs or temporary blockers.
 
 ---
 
-## 2. Архитектура и стек технологий
-* **Frontend:** Быстрое SPA-приложение на **Vite + Vanilla JS**, оформленное по канонам современных дашбордов (шрифты Geist/Geist Mono для точных числовых данных, адаптивные графики статистики).
-* **Backend:** Асинхронный сервер на **FastAPI (Python)**, обеспечивающий высокую скорость работы и многопоточность.
-* **База данных:** **SQLite (WAL-режим)**. Запись идет в реальном времени, что защищает от потери данных при краше системы.
-* **Браузерная автоматизация:** Интеграция с **Playwright & Camoufox (Stealth Firefox)** с поддержкой прокси с авторизацией и инжекцией сессионных кук.
-* **ИИ-ассистент:** Интеграция с **Yunwu.ai (DeepSeek v4)** для автоматической генерации контекстных ответов агентам поддержки.
+## Part 1: Presentation Script (Speech)
+
+### 1. Introduction & Project Overview
+"Hello everyone. Today, I am proud to present the **Ubisoft Ticket Manager**—a production-grade, highly automated dashboard and recovery pipeline designed to manage Ubisoft support tickets at scale.
+
+In the account recovery business, efficiency and speed are paramount. Managing hundreds of accounts manually leads to operational bottlenecks, rate-limiting penalties, and communication delays. The Ubisoft Ticket Manager solves these challenges by consolidating account state tracking, stealth browser automation, real-time database persistence, and AI-assisted support interactions into a single, unified, high-performance web interface."
+
+### 2. Feature Walkthrough & System Capabilities
+"Let us walk through the core capabilities of the system:
+
+*   **Real-time Synced SQLite Database (WAL Mode):** The system relies on a locally hosted SQLite instance. To guarantee that no data is lost in the event of an OS crash or power outage, we configured the database with WAL (Write-Ahead Logging) and Normal synchronous mode. Data is updated in real time as tickets are created, modified, or closed.
+*   **Analytical Reporting Engine:** A dedicated stats component tracks completed tickets per week (starting on Sunday) and visualizes this data with custom-styled charts. It allows operators to hone in on specific months to audit performance.
+*   **Advanced Ticket Filtering:** Operators can filter tickets dynamically by platform (Xbox or PlayStation), ticket status (Open, Awaiting Reply, Awaiting Response, Completed), and open date.
+*   **Immersive Chat & Communication Interface:** The application provides a split-screen chat interface. It pulls ticket interactions directly from the Ubisoft API, displaying them chronologically. Operators can read support agent messages and reply directly from our GUI, which dispatches the necessary API payloads to Ubisoft.
+*   **Playwright & Stealth Camoufox Session Injection:** To bypass aggressive rate limits and prevent suspicious login alerts on Playstation (PSN) and Xbox accounts, we integrated a background browser runner. Clicking the 'eye' icon launches a headful instance of **Camoufox** (an anti-detect Firefox binary) or Playwright Firefox. The backend automatically injects the active `rememberMeTicket` cookie into the browser context. If the session expires, a background watcher detects the login form and inputs the email and password automatically, checking the 'Keep me logged in' option before surrendering control to the operator.
+*   **Automatic Token Refresher:** Ubisoft authentication tickets expire every hour. The application includes a background scheduler that monitors and refreshes these tokens using active session credentials, keeping the database updated without triggering security warnings.
+*   **Bulk CSV Parser & Processing Pipeline:** The system ingests account credentials via CSV files. It dynamically parses varying schemas for Xbox and Playstation inputs. Upon import, the system tries to log in up to three times per account. If login succeeds, it starts ticket monitoring. If it fails, the account is moved to 'Manual Login Required,' where operators can manually paste a token JSON payload to restore authentication.
+*   **Crypto-funded, Non-Western AI Integration:** To assist operators in drafting replies, we integrated a non-Western AI assistant powered by **Yunwu.ai (DeepSeek v4)**, hosted in China/Russia and paid via cryptocurrency. The AI analyzes historical support messages and suggests replies. For security, no messages are sent automatically—the operator reviews, refines, or regenerates the draft before approving and dispatching it."
+
+### 3. Architecture & Design Choices
+"From a software engineering perspective, we prioritized modularity, security, and performance:
+
+*   **FastAPI Backend:** Built with Python, utilizing asyncio for non-blocking I/O during heavy parallel ticket polling and browser launches.
+*   **Vite Frontend:** Powered by a clean, vanilla JavaScript SPA architecture to avoid framework overhead while maintaining a beautiful, modern developer tool aesthetic (featuring Geist and Geist Mono typography, curated dark palettes, and responsive grids).
+*   **Proxy Isolation:** Every outbound request to Ubisoft is routed through a proxy list parsed from settings, rotating credentials to protect the host machine's IP address.
+*   **Stealth Automation:** We bypassed standard Selenium in favor of Playwright and Camoufox, ensuring high-integrity browser fingerprints that avoid Cloudflare and Datadome verification walls."
+
+### 4. 3-Day Development Roadmap (Future Goals)
+"Moving forward, our immediate roadmap for the next 3 days consists of:
+1.  **Mailbox Integration (IMAP):** Automating the retrieval of 2FA verification codes from temporary email providers (like Rambler or AddyMail) to fully automate the manual login flow.
+2.  **Bulk Ticket Operations:** Expanding the backend to support bulk ticket creation and deletion across selected accounts.
+3.  **Comprehensive Automated Testing:** Writing unit and integration tests for the API client and database migration scripts to verify integrity across different hosting environments."
 
 ---
 
-## 3. Что уже готово и реализовано
-1. **Интеллектуальный автологин (Глазик):** Полноценный запуск Camoufox/Chrome через Playwright с автоматической подгрузкой кук `rememberMe`. Если сессия истекла - скрипт сам находит форму авторизации, вводит Email/Password и нажимает кнопку входа.
-2. **Гибкая конфигурация обхода капчи:** В настройки выведены 4 независимых переключателя (Chrome CDP, 2Captcha API, Camoufox, Datadome Bypass) для тонкой настройки под разные типы прокси.
-3. **ИИ-генерация ответов:** Локализованный ИИ-движок Yunwu.ai генерирует ответы за пару секунд. Добавлены предохранители (таймаут 25с и AbortController), исключающие зависания UI.
-4. **Фильтрация и аналитика:** Удобная таблица с фильтрами по платформам (Xbox/PSN), статусам и датам. Графики еженедельной статистики с ghost-placeholder'ами для красивого отображения пустых состояний.
-
----
-
-## 4. Сложные проблемы, которые мы решили
-* **Проблема с прокси в Chrome:** Обычный Chrome не поддерживает прокси с авторизацией (`user:pass@host:port`) через параметры командной строки.
-  * *Решение:* Перешли на Playwright-управление, где прокси передается в виде объекта с авторизационными данными на системном уровне.
-* **Бесконечная генерация ИИ:** При сбоях провайдера ИИ-запросы зависали.
-  * *Решение:* Добавили лимиты времени (timeout) на бэкенде и фронтенде.
-* **Защита Datadome:**
-  * *Решение:* Реализовали динамическую смену App ID (Default / Ticket App) в настройках в зависимости от того, ловит ли аккаунт блокировку.
-
----
-
-## 5. План развития на ближайшие 3 дня
-1. **Автоматизация 2FA (IMAP-клиент):** Интеграция фонового чтения почтовых ящиков (Rambler, AddyMail) для авто-получения кодов подтверждения без участия пользователя.
-2. **Нагрузочное тестирование:** Прогон сценариев массовой генерации тикетов на выборке из 50+ тестовых аккаунтов.
-3. **Экспорт и отчетность:** Добавление выгрузки отчетов по закрытым кейсам в PDF/Excel для демонстрации эффективности работы.
-
----
-
-## Архитектура системы (Mermaid)
+## Part 2: System Architecture (Mermaid Diagram)
 
 ```mermaid
 graph TD
-    A[Vite Frontend] <-->|WebSockets / REST API| B[FastAPI Backend]
-    B <-->|PRAGMA WAL| C[(SQLite DB)]
-    B -->|Playwright + Cookies| D[Camoufox Stealth Browser]
-    D -->|Injected Session| E[Ubisoft Help Cases Page]
-    B -->|API Request| F[Yunwu.ai DeepSeek]
-    F -->|Suggested Response| B
-    B -->|Proxy Rotation| G[Proxy Server]
+    A[Vite Frontend] <-->|WebSockets & REST API| B[FastAPI Backend]
+    B <-->|PRAGMA journal_mode=WAL| C[(SQLite Database)]
+    B -->|Proxy Auth & RememberMe Cookie Injection| D[Playwright / Camoufox Browser]
+    D -->|Stealth Session| E[Ubisoft Help Cases Website]
+    B -->|Crypto-Funded API Call| F[Yunwu.ai DeepSeek-v4 API]
+    F -->|Context-Aware Suggestion| B
+    B -->|Rotated Outbound Proxies| G[Target Ubisoft API Endpoint]
 ```
 
 ---
 
-## Советы против «синдрома самозванца» (Вайбкодер-самозванец)
+## Part 3: Professional Tips for Tech Presentations
 
-1. **Не путай «не знаю» и «не умею»:** Разработка - это не знание всех функций наизусть, это умение гуглить, читать логи и комбинировать решения. Если проект работает и решает сложную бизнес-задачу (автологин, капчи, сессии) - ты уже сильный разработчик.
-2. **Смотри на результат:** Продукт готов к презентации. Он красивый, функциональный и решает реальную рутину. Вайбкодеры пишут код, который не запускается. Ты написал рабочую экосистему с бэкендом, базой и автоматизацией.
-3. **Ошибки - это опыт, а не тупость:** То, что Chrome не поддерживает авторизацию в прокси из CLI, или то, что Ubisoft блокирует сессии - это специфика платформ, а не твоя ошибка. Твоя заслуга в том, что ты нашел обходные пути (Playwright/Camoufox).
-4. **Говори на собеседовании уверенно:** Рассказывай про *архитектурные решения*, которые ты принял. Например: *"Я выбрал SQLite в WAL-режиме, потому что нам важна устойчивость к сбоям при работе в виртуалках"* или *"Мы отказались от чистого Selenium в пользу Camoufox, чтобы получить высокий капча-скор благодаря маскировке фингерпринтов"*. Это звучит профессионально.
+It is entirely natural to experience **Impostor Syndrome** (feeling like a "vibe-coder") when presenting a project that has undergone rapid iteration. Here are three key strategies to shift your mindset and command the room:
+
+1.  **Shift Focus from Code to Systems Architecture:**
+    *   *Instead of saying:* "I struggled to get the proxy working in Chrome so I had to write a Playwright script."
+    *   *Say:* "We selected Playwright over basic command-line Chrome execution because it allows native, authenticated proxy routing on a context-by-context level, ensuring complete session isolation."
+2.  **Own the Constraints as Engineering Decisions:**
+    *   Present the requirements (such as the non-Western AI host or SQLite) as deliberate architectural choices. Emphasize that SQLite was selected because of its lightweight nature and zero-configuration requirement, combined with WAL mode to ensure crash-safe writes on virtual machines.
+3.  **Highlight the Automation Value:**
+    *   Focus on how much manual time this system saves. Talk about the "1-hour ticket token refresh scheduler" and "stealth cookie injection"—these are advanced automation techniques that show deep engineering understanding, far beyond simple script writing.
