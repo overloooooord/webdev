@@ -320,8 +320,9 @@ async def launch_browser(account_id: int, platform: str):
 
 async def run_playwright_profile_browser(account_id: int):
     """
-    Launch Playwright/Camoufox browser, inject existing Ubisoft rememberMe cookies,
-    navigate to My Cases. If login form appears, auto-fill credentials.
+    Launch Playwright/Camoufox browser, inject existing Ubisoft rememberMe & ticket cookies,
+    populate localStorage, navigate to My Cases. If login form appears, auto-fill credentials
+    and save newly issued rememberMe cookies back to the SQLite database.
     Keep browser alive until closed.
     """
     import datetime
@@ -333,12 +334,17 @@ async def run_playwright_profile_browser(account_id: int):
     password = acc.get("login_password") or ""
     auth_json_str = acc.get("auth_data_json") or "{}"
 
-    remember_me_ticket = None
+    auth_data = {}
     try:
         auth_data = json.loads(auth_json_str)
-        remember_me_ticket = auth_data.get("rememberMeTicket") or auth_data.get("ticket")
     except Exception:
         pass
+
+    remember_me_ticket = auth_data.get("rememberMeTicket") or auth_data.get("rememberMe") or auth_data.get("ticket")
+    ticket = auth_data.get("ticket") or acc.get("ubisoft_token")
+    session_id = auth_data.get("sessionId") or acc.get("session_id")
+    profile_id = auth_data.get("profileId") or acc.get("profile_id")
+    user_id = auth_data.get("userId") or acc.get("user_id")
 
     url = "https://www.ubisoft.com/en-us/help/cases"
     proxy_setting = get_setting("proxy_us") or get_setting("proxy_global")
@@ -371,7 +377,6 @@ async def run_playwright_profile_browser(account_id: int):
 
     log.info(f"Launching profile browser. Camoufox={use_camoufox}, Proxy={playwright_proxy}")
 
-    # Ensure X display is available on Linux for GUI
     import os
     os.environ.setdefault("DISPLAY", ":0")
 
@@ -379,7 +384,6 @@ async def run_playwright_profile_browser(account_id: int):
     browser = None
     try:
         if use_camoufox:
-            # We bypass the context manager so it doesn't close immediately
             cf = AsyncCamoufox(
                 headless=False,
                 geoip=True,
@@ -396,51 +400,60 @@ async def run_playwright_profile_browser(account_id: int):
 
         context = await browser.new_context()
 
-        # Add rememberMe cookies if available
-        if remember_me_ticket:
-            cookies = [
-                {
+        # Build full set of session cookies
+        cookies_to_set = []
+        domains = [".ubisoft.com", ".connect.ubisoft.com", "www.ubisoft.com", "connect.ubisoft.com"]
+
+        for domain in domains:
+            if remember_me_ticket:
+                cookies_to_set.append({
                     "name": "rememberMeTicket",
                     "value": remember_me_ticket,
-                    "domain": ".ubisoft.com",
+                    "domain": domain,
                     "path": "/",
                     "httpOnly": True,
                     "secure": True,
                     "sameSite": "None"
-                },
-                {
+                })
+                cookies_to_set.append({
                     "name": "rememberMe",
                     "value": remember_me_ticket,
-                    "domain": ".ubisoft.com",
+                    "domain": domain,
                     "path": "/",
                     "httpOnly": True,
                     "secure": True,
                     "sameSite": "None"
-                },
-                {
-                    "name": "rememberMeTicket",
-                    "value": remember_me_ticket,
-                    "domain": ".connect.ubisoft.com",
+                })
+            if ticket:
+                cookies_to_set.append({
+                    "name": "ubi-ticket",
+                    "value": ticket,
+                    "domain": domain,
                     "path": "/",
-                    "httpOnly": True,
+                    "httpOnly": False,
                     "secure": True,
                     "sameSite": "None"
-                },
-                {
-                    "name": "rememberMe",
-                    "value": remember_me_ticket,
-                    "domain": ".connect.ubisoft.com",
+                })
+            if session_id:
+                cookies_to_set.append({
+                    "name": "ubi-sessionid",
+                    "value": session_id,
+                    "domain": domain,
                     "path": "/",
-                    "httpOnly": True,
+                    "httpOnly": False,
                     "secure": True,
                     "sameSite": "None"
-                }
-            ]
-            await context.add_cookies(cookies)
+                })
+
+        if cookies_to_set:
+            try:
+                await context.add_cookies(cookies_to_set)
+                log.info(f"Injected {len(cookies_to_set)} session cookies into browser context.")
+            except Exception as e:
+                log.warning(f"Could not add cookies: {e}")
 
         page = await context.new_page()
 
-        # Wrap browser context to act like a process
         class PlaywrightBrowserWrapper:
             def __init__(self, browser_obj, playwright_obj):
                 self.browser_obj = browser_obj
@@ -471,7 +484,6 @@ async def run_playwright_profile_browser(account_id: int):
             "startedAt": datetime.datetime.now().isoformat(),
         }
 
-        # Broadcast launch event to frontend via WS
         await manager.broadcast({
             "type": "browser_launched",
             "accountId": account_id,
@@ -481,6 +493,33 @@ async def run_playwright_profile_browser(account_id: int):
         })
 
         await page.goto(url, timeout=60000)
+
+        # Inject localStorage keys for client-side app awareness
+        try:
+            await page.evaluate("""(data) => {
+                try {
+                    if (data.rememberMeTicket) {
+                        localStorage.setItem('rememberMeTicket', data.rememberMeTicket);
+                        localStorage.setItem('ubi-remember-me', data.rememberMeTicket);
+                    }
+                    if (data.ticket) {
+                        localStorage.setItem('ubi-ticket', data.ticket);
+                    }
+                    if (data.sessionId) {
+                        localStorage.setItem('ubi-sessionid', data.sessionId);
+                    }
+                    if (data.profileId) {
+                        localStorage.setItem('ubi-profileid', data.profileId);
+                    }
+                } catch(e) {}
+            }""", {
+                "rememberMeTicket": remember_me_ticket,
+                "ticket": ticket,
+                "sessionId": session_id,
+                "profileId": profile_id
+            })
+        except Exception as ex:
+            log.debug(f"LocalStorage injection note: {ex}")
 
         # Check for login form and auto-fill if necessary
         for _ in range(12):  # Poll for up to 60s
@@ -492,14 +531,12 @@ async def run_playwright_profile_browser(account_id: int):
             submit_btn = None
             remember_me_checkbox = None
 
-            # Check main frame first
             if await page.query_selector("input[type='email'], input#email"):
                 email_field = await page.query_selector("input[type='email'], input#email")
                 password_field = await page.query_selector("input[type='password'], input#password")
                 submit_btn = await page.query_selector("button[type='submit'], #loginBtn, button.btn-primary")
                 remember_me_checkbox = await page.query_selector("input[type='checkbox'], #rememberMe")
             else:
-                # Check frames (Ubisoft uses a nested connect.ubisoft.com iframe for logins)
                 for frame in page.frames:
                     if "connect.ubisoft.com" in frame.url or await frame.query_selector("input[type='email'], input#email"):
                         email_field = await frame.query_selector("input[type='email'], input#email")
@@ -520,7 +557,58 @@ async def run_playwright_profile_browser(account_id: int):
                 await password_field.fill(password)
                 if submit_btn:
                     await submit_btn.click()
-                    log.info("Auto-login: Submitted form.")
+                    log.info("Auto-login: Form submitted. Waiting for session capture...")
+                    await asyncio.sleep(8)
+
+                    # Capture updated cookies after login and persist to DB
+                    try:
+                        current_cookies = await context.cookies()
+                        new_rm_ticket = None
+                        new_ticket = None
+                        new_session_id = None
+
+                        for c in current_cookies:
+                            c_name = c.get("name", "")
+                            c_val = c.get("value", "")
+                            if c_name in ("rememberMeTicket", "rememberMe") and c_val:
+                                new_rm_ticket = c_val
+                            elif c_name in ("ubi-ticket", "ticket") and c_val:
+                                new_ticket = c_val
+                            elif c_name in ("ubi-sessionid", "sessionId") and c_val:
+                                new_session_id = c_val
+
+                        if new_rm_ticket or new_ticket:
+                            log.info(f"Auto-login: Captured fresh cookies for {acc.get('username')}. Updating DB...")
+                            updated_auth_data = dict(auth_data)
+                            if new_rm_ticket:
+                                updated_auth_data["rememberMeTicket"] = new_rm_ticket
+                                updated_auth_data["rememberMe"] = new_rm_ticket
+                            if new_ticket:
+                                updated_auth_data["ticket"] = new_ticket
+                            if new_session_id:
+                                updated_auth_data["sessionId"] = new_session_id
+
+                            new_token_val = new_ticket or acc.get("ubisoft_token") or new_rm_ticket
+                            new_expiry = (datetime.datetime.now() + datetime.timedelta(hours=1)).isoformat()
+
+                            auth_update_payload = {
+                                "ubisoft_token": new_token_val,
+                                "token_expiry": new_expiry,
+                                "session_id": new_session_id or acc.get("session_id") or "",
+                                "profile_id": acc.get("profile_id") or "",
+                                "user_id": acc.get("user_id") or "",
+                                "auth_data_json": json.dumps(updated_auth_data),
+                            }
+                            update_account_auth(account_id, auth_update_payload)
+                            log.info(f"Successfully saved updated auth tokens to DB for account {account_id}")
+
+                            await manager.broadcast({
+                                "type": "account_updated",
+                                "account": get_account_by_id(account_id)
+                            })
+                    except Exception as ex:
+                        log.error(f"Error capturing and saving new cookies: {ex}")
+
                 break
 
             await asyncio.sleep(5)
