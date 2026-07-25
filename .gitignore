@@ -1,0 +1,25 @@
+# Ignore everything by default in Downloads
+/*
+
+# Allow tracking only the Project Files directory
+!/Project Files/
+
+# Exclude unnecessary build/dependency/runtime files inside Project Files
+Project Files/ticket-manager/node_modules/
+Project Files/ticket-manager/dist/
+Project Files/ticket-manager/data/tickets.db
+Project Files/ticket-manager/data/tickets.db-shm
+Project Files/ticket-manager/data/tickets.db-wal
+Project Files/ticket-manager/data/*.db
+Project Files/ticket-manager/data/*.db-shm
+Project Files/ticket-manager/data/*.db-wal
+Project Files/ticket-manager/.chrome_profile/
+Project Files/ticket-manager/_debug/
+Project Files/ticket-manager/backend/__pycache__/
+Project Files/ticket-manager/backend/**/*.pyc
+Project Files/ticket-manager-py/__pycache__/
+Project Files/ticket-manager-py/**/*.pyc
+Project Files/ticket-manager-py/*.pyc
+*.pyc
+__pycache__/
+.DS_Store

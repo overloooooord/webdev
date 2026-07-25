@@ -1,0 +1,15 @@
+node_modules/
+dist/
+data/tickets.db
+data/tickets.db-shm
+data/tickets.db-wal
+data/*.db
+data/*.db-shm
+data/*.db-wal
+.chrome_profile/
+_debug/
+*.log
+__pycache__/
+*.pyc
+.env
+.DS_Store

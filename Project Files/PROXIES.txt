@@ -1,0 +1,6 @@
+Most requests being sent via the Ubisoft API will use the following proxy:
+uorder40522_country-US:KD1syXKaSXTQJGDn@budget.legionproxy.io:1337 
+
+That is one is set specifically to be a rotating US proxy, but if this doesn't work and you need a worldwide proxy, then use the following:
+uorder40522:KD1syXKaSXTQJGDn@budget.legionproxy.io:1337
+
